@@ -13,7 +13,7 @@ POST_COPY_ROOTFS_PATH=board/common/post_copy_rootfs
 UNITTEST_SRC_PATH=src/big/unittest
 
 #DOWNLOAD_URL=https://ai.b-bug.org/k230
-DOWNLOAD_URL?=https://kendryte-download.canaan-creative.com/k230
+DOWNLOAD_URL?=https://download.kendryte.com/k230
 STATUS := $(shell curl --output /dev/null --silent --head --fail https://ai.b-bug.org/k230/ && echo $$?)
 
 ifeq ($(STATUS),0)

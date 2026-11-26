@@ -1,0 +1,75 @@
+name: Branch Push
+
+on:
+  push:
+    branches:
+      - "**"
+
+env:
+  CONF: k230_canmv_01studio_defconfig
+
+permissions:
+  contents: read
+
+jobs:
+  branch_push:
+    name: Branch Push Check
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v4
+      -
+        name: Show branch info
+        run: |
+          echo "Branch: ${GITHUB_REF_NAME}"
+          echo "Commit: ${GITHUB_SHA}"
+          echo "Pushed by: ${GITHUB_ACTOR}"
+          git log -1 --oneline
+
+  build_01studio:
+    name: Build-01Studio
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    container:
+      image: ghcr.io/kendryte/k230_sdk:latest
+      options: --hostname ci --user root
+    steps:
+      -
+        name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          clean: true
+          submodules: recursive
+
+      -
+        name: Download Toolchain and Setup Build Env
+        run: |
+          git config --global --add safe.directory $PWD
+          make prepare_sourcecode || exit 1
+          mkdir -p /opt/ || exit 1
+          rm -rf /opt/toolchain/
+          ln -s $PWD/toolchain /opt/ || exit 1
+          ls -alht /opt/toolchain/ || exit 1
+
+      -
+        name: Build 01Studio image
+        run: |
+          echo "start to build k230 images for ${CONF}"
+          make CONF=$CONF || exit 1
+          ls -alht output/${CONF}/images || exit 1
+
+      -
+        name: Collect artifacts
+        run: |
+          mkdir -p ${GITHUB_WORKSPACE}/artifacts
+          cp -L output/${CONF}/images/*.img.gz ${GITHUB_WORKSPACE}/artifacts/ || exit 1
+          ls -alht ${GITHUB_WORKSPACE}/artifacts/
+
+      -
+        name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-01studio
+          path: ${{ github.workspace }}/artifacts
